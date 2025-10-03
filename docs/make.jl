@@ -42,4 +42,5 @@ makedocs(
 deploydocs(
     repo = "github.com/Luosipeng/HyDistFlow.jl.git",
     devbranch = "master",
+    forcepush = true,
 )
