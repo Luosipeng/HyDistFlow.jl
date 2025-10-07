@@ -42,7 +42,10 @@ module Utils
     # module in ios
     include(joinpath(dirname(@__DIR__), "ios","ETAPImporter.jl"))
     include(joinpath(dirname(@__DIR__), "ios","matlab2julia.jl"))
-
+    include(joinpath(dirname(@__DIR__), "ios","read_irradiance_data.jl"))
+    include(joinpath(dirname(@__DIR__), "ios","read_storage_profile_data.jl"))
+    include(joinpath(dirname(@__DIR__), "ios","read_load_data.jl"))
+    include(joinpath(dirname(@__DIR__), "ios","read_price_data.jl"))
     # ... export other indexes defined in idx.jl ...
     # Export bus indices
     const PQ, PV, REF, NONE, BUS_I, BUS_TYPE, PD, QD, GS, BS, BUS_AREA, VM, VA, BASE_KV, ZONE, VMAX, VMIN, 
@@ -111,5 +114,6 @@ module Utils
     export ext2int, int2ext, find_islands, extract_islands, topology_analysis
     export find_islands_acdc, extract_islands_acdc
     export load_julia_power_data, convert_matpower_case
+    export read_load_data, read_price_data, read_irradiance_data, read_storage_profile_data
     
 end
