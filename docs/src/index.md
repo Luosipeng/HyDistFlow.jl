@@ -57,10 +57,10 @@ using Base.Threads
 using HyDistFlow
 
 # Input Data
-file_path = joinpath(pwd(), "data", "test_case.xlsx")
-load_path = joinpath(pwd(), "data", "load.xlsx")  
-price_path = joinpath(pwd(), "data", "price.xlsx")  
-irradiance_path = joinpath(pwd(), "data", "irradiance.xlsx")  
+file_path = joinpath(pkgdir(HyDistFlow), "data", "test_case.xlsx")
+load_path = joinpath(pkgdir(HyDistFlow), "data", "load.xlsx")  
+price_path = joinpath(pkgdir(HyDistFlow), "data", "price.xlsx")  
+irradiance_path = joinpath(pkgdir(HyDistFlow), "data", "irradiance.xlsx")  
 
 # Process Data
 case = load_julia_power_data(file_path)
