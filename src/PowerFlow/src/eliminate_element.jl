@@ -16,7 +16,13 @@ function eliminate_element(jpc)
     if !isempty(pv_acsystem)
         bus_ids = pv_acsystem[:, PV_AC_BUS]  # Assuming the first column contains bus IDs
         # Find the indices of the elements to eliminate
-        indices_to_eliminate = findall(jpc["genAC"][:, GEN_BUS].== bus_ids)  
+         indices_to_eliminate = Int[]
+        for i in 1:size(jpc.genAC, 1)
+            gen_bus = Int(jpc.genAC[i, GEN_BUS])
+            if gen_bus in bus_ids
+                push!(indices_to_eliminate, i)
+            end
+        end 
         # Eliminate the elements from genAC
         if !isempty(indices_to_eliminate)
             keep_indices = setdiff(1:size(jpc["genAC"], 1), indices_to_eliminate)
