@@ -42,7 +42,7 @@ module HyDistFlow
     using .ComponentModel: ChargingStation, Charger, EVAggregator, V2GService
     using .ComponentModel: Microgrid, PVArray, ACPVSystem
     using .Utils: convert_matpower_case
-    using .TimeDomainPowerFlow: create_time_series_storage_profile, read_storage_profile_data
+    using .TimeDomainPowerFlow: create_time_series_storage_profile
 
     # ... export other indexes defined in idx.jl ...
     # Export bus indices
