@@ -98,13 +98,14 @@ function run_dynamic_dispatch(new_jpc,
     rconv = zeros(size(converter, 1))
     # Extract bus count
     n_nodes = size(new_jpc.busAC, 1) + size(new_jpc.busDC, 1)
-    A , branch_data = TimeDomainPowerFlow.build_incidence_matrix_td(n_nodes, branchAC, branchDC, converter)
+    A , branch_data = build_incidence_matrix_td(n_nodes, branchAC, branchDC, converter)
 
      # Initialize
     nbr = size(A, 1)  # Number of branches
     nc = size(converter, 1)  # Number of converters
     ng = size(genAC_PG, 1)  # Number of AC generators
     npv = size(new_jpc.pv, 1)  # Number of PV devices
+    npv_ac = size(new_jpc.pv_acsystem, 1)  # Number of AC PV devices
     ns = size(new_jpc.storage, 1)  # Number of storage devices
 
     # Search for branch indices
@@ -136,6 +137,7 @@ function run_dynamic_dispatch(new_jpc,
     @variable(model, Pij_inv[1:nc,1:num_hours] >= 0)  # Converter power flow
     @variable(model, Pij_rec[1:nc,1:num_hours] >= 0)  # Inverter power flow
     @variable(model, P_pv_mw[1:npv,1:num_hours] >= 0)  # PV power flow
+    @variable(model, ac_pv_p_mw[1:npv_ac,1:num_hours] >= 0)  # AC PV power flow
     @variable(model, soc[1:ns,1:num_hours])  # Storage power flow
     @variable(model, ess_charge[1:ns,1:num_hours])  # Storage power flow
     @variable(model, ess_discharge[1:ns,1:num_hours])  # Storage power flow
@@ -144,7 +146,11 @@ function run_dynamic_dispatch(new_jpc,
 
     # PV power constraints
     for t in 1:num_hours
-        @constraint(model, 0 .<= P_pv_mw[:,t] .<= pv_max_p_mw[:].*pv_max_p_mw_ratio[:,t])  # PV power injection lower limit
+        @constraint(model, 0 .<= P_pv_mw[:,t] .<= pv_max_p_mw[:])  # PV power injection lower limit
+    end
+
+    for t in 1:num_hours
+        @constraint(model, 0 .<= ac_pv_p_mw[:,t] .<= pv_ac_p_mw[:])  # AC PV power injection lower limit
     end
 
     # AC generator power constraints
@@ -201,20 +207,43 @@ function run_dynamic_dispatch(new_jpc,
 
    # Power balance constraints
     for t in 1:num_hours
-        @constraint(model,A' * Pij[:,t] + Cld_ac*loadAC_PD[:,t] + Cld_dc*loadDC_PD[:,t] -Cgen_ac*Pgen[:,t] -Cpv_ac*(pv_ac_p_mw.*pv_ac_p_mw_ratio[:,t]) + Cconv_ac*(Pij_inv[:,t]-η_rec.*Pij_rec[:,t]) + Cconv_dc*(Pij_rec[:,t]-η_inv.*Pij_inv[:,t]) - Cpv_dc * P_pv_mw[:,t] + Cstorage_ac*(ess_charge[:,t]-ess_discharge[:,t]) .== 0)
+        # 构建基础平衡项
+        balance_expr = (
+            A' * Pij[:,t] 
+            + Cld_ac * loadAC_PD[:,t] 
+            + Cld_dc * loadDC_PD[:,t] 
+            - Cgen_ac * Pgen[:,t] 
+            + Cconv_ac * (Pij_inv[:,t] - η_rec .* Pij_rec[:,t]) 
+            + Cconv_dc * (Pij_rec[:,t] - η_inv .* Pij_inv[:,t]) 
+            + Cstorage_ac * (ess_charge[:,t] - ess_discharge[:,t])
+        )
+        
+        # 添加 AC PV 项（如果存在）
+        if npv_ac > 0
+            balance_expr -= Cpv_ac * (ac_pv_p_mw[:,t] .* pv_ac_p_mw_ratio[:,t])
+        end
+        
+        # 添加 DC PV 项（如果存在）
+        if npv > 0
+            balance_expr -= Cpv_dc * (P_pv_mw[:,t] .* pv_max_p_mw_ratio[:,t])
+        end
+        
+        @constraint(model, balance_expr .== 0)
     end
 
     original_objective = sum(day_price_line[t,2] * Pgen[g, t] for g in 1:ng for t in 1:num_hours)
     penalty_weight = 1000  # Penalty weight, needs adjustment
     # Objective function: Minimize total power flow
-    @objective(model, Min, sum(day_price_line[t,2] * Pgen[g, t] for g in 1:ng for t in 1:num_hours))
-    # if nc > 0 && num_hours > 0
-    #     complementarity_penalty = sum(Pij_inv[i,t] * Pij_rec[i,t] for i in 1:nc for t in 1:num_hours)
-    #     @objective(model, Min, original_objective + penalty_weight * complementarity_penalty)
-    # else
-    #     @objective(model, Min, original_objective)
-    #     println("Warning: nc or num_hours is zero, skipping complementarity penalty term")
-    # end
+    # @objective(model, Min, sum(day_price_line[t,2] * Pgen[g, t] for g in 1:ng for t in 1:num_hours))
+    if nc > 0 && num_hours > 0
+        complementarity_penalty = sum(Pij_inv[i,t] * Pij_rec[i,t] for i in 1:nc for t in 1:num_hours)
+        @objective(model, Min, original_objective + penalty_weight * complementarity_penalty)
+    else
+        @objective(model, Min, original_objective)
+        println("Warning: nc or num_hours is zero, skipping complementarity penalty term")
+    end
+    # Objective function: Minimize the sum of squares of AC branch power flows
+    # @objective(model, Min, sum(Pij[i,t]^2 *r[i]  for i in acbranch_indices for t in 1:num_hours)  )
     
 
     # Solve the model
@@ -263,6 +292,8 @@ function run_dynamic_dispatch(new_jpc,
         # println("\nStorage SOC (soc):")
         soc_values = value.(soc)
         # display(soc_values)
+
+        p_pv_ac_values = value.(ac_pv_p_mw)
         
         # Return results
         return Dict(
@@ -272,6 +303,7 @@ function run_dynamic_dispatch(new_jpc,
             "Pij_inv" => Pij_inv_values,
             "Pij_rec" => Pij_rec_values,
             "P_pv_mw" => P_pv_values,
+            "ac_pv_p_mw" => p_pv_ac_values,
             "ess_charge" => ess_charge_values,
             "ess_discharge" => ess_discharge_values,
             "soc" => soc_values

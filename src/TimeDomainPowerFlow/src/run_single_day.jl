@@ -539,8 +539,9 @@ function run_single_day(old_jpc, opt, day_load_matrix, day_price_line, day_irrad
 
         # PV 覆盖
         jpc.pv[:, PV_ISC] = pv_isc .* pv_max_p_mw_ratio[:,t]
-        jpc.pv[:, PV_IMPP] = pv_impp .* pv_max_p_mw_ratio[:,t]
-        jpc.pv_acsystem[:, PV_AC_INVERTER_PAC] = pv_ac_inverter_pac .* pv_ac_p_mw_ratio[:,t]
+        jpc.pv[:, PV_IMPP] = result["P_pv_mw"][:,t] .* pv_max_p_mw_ratio[:,t] .*1e6 ./ (jpc.pv[:, PV_VMPP] )
+
+        jpc.pv_acsystem[:, PV_AC_INVERTER_PAC] = result["ac_pv_p_mw"][:,t] .* pv_ac_p_mw_ratio[:,t]
 
         # 8) 运行潮流
         results_pf[t] = PowerFlow.runhpf(jpc, opt)
