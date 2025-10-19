@@ -449,8 +449,10 @@ function plot_flow_violations(results, case, time_day, flow_limit = 3.0, plot_ty
                     "Max Branches with Violations: $max_violations ($(max_viol_time_label))\n" *
                     "Max Violation Percentage: $(round(max_violation_pct, digits=2))% ($(max_pct_time_label))"
         
-        annotate!(subplot=1, 0.7 * length(time_points), 0.8 * max_violations, 
-                 text(stats_text, :left, 8))
+    x_pos = time_points[end] - max(1, round(Int, length(time_points) * 0.05))
+    y_pos = max_violations == 0 ? 0.1 : max(max_violations * 0.9, 0.1)
+    annotate!(subplot=1, x_pos, y_pos,
+         text(stats_text, :right, 8))
         
         # Set optimized x-axis tick labels
         plot!(subplot=1, xticks=([], []))  # No x-axis labels for top plot
@@ -671,8 +673,10 @@ function plot_flow_violations(results, case, time_day, flow_limit = 3.0, plot_ty
                       label="")
                 
                 # Add statistics
-                annotate!(subplot=i, 0.7 * length(time_points), 0.8 * max_flow, 
-                         text("Max: $(round(max_flow, digits=2)) MW\nViol: $violation_times", :left, 6))
+                x_pos = time_points[end] - max(1, round(Int, length(time_points) * 0.05))
+                y_pos = max_flow == 0 ? flow_limit * 0.1 : max(max_flow * 0.9, flow_limit * 0.1)
+                annotate!(subplot=i, x_pos, y_pos,
+                         text("Max: $(round(max_flow, digits=2)) MW\nViol: $violation_times", :right, 6))
                 
                 # Set x-axis labels for subplot
                 if i > (plot_layout[1]-1)*plot_layout[2]  # Only show x-axis labels on bottom subplots

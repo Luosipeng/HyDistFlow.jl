@@ -158,10 +158,10 @@ function plot_voltage_time_series(results, bus_name, case, time_day, bus_type = 
         plot_result = plot(p1, p2, layout=(2,1), size=plot_size)
         
         # Add time span information
-        if time_day > 7
-            annotate!(subplot=1, 0.5*length(time_points), minimum(voltage_magnitude_series) + 0.9*(maximum(voltage_magnitude_series)-minimum(voltage_magnitude_series)), 
-                     text("Time span: $(time_day) days", :right, 8))
-        end
+        # if time_day > 7
+        #     annotate!(subplot=1, 0.5*length(time_points), minimum(voltage_magnitude_series) + 0.9*(maximum(voltage_magnitude_series)-minimum(voltage_magnitude_series)), 
+        #              text("Time span: $(time_day) days", :right, 8))
+        # end
         
     else  # DC bus
         bus_name_to_index = case.busdc_name_to_id

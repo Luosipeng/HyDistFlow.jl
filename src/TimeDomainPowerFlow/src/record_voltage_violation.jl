@@ -369,13 +369,6 @@ function record_voltage_violation(results, bus_name, case, time_day, bus_type = 
     # Add auxiliary grid lines to make time points easier to match
     p = plot!(p, minorgrid=true, minorgridalpha=0.1)
     
-    # Add date range annotation
-    if time_day > 7
-        day_range_text = "Time span: $(time_day) days"
-        annotate!(0.5*length(time_points), voltage_min_limit - 0.02, 
-                 text(day_range_text, :center, 8))
-    end
-    
     # Add annotation with violation statistics
     violation_text = "Total Violations: $(total_violations)\n" *
                      "Below Lower Limit: $(under_limit_count)\n" *
@@ -385,10 +378,18 @@ function record_voltage_violation(results, bus_name, case, time_day, bus_type = 
                      "Max Continuous Above Limit: $(max_over_continuous) hours\n" *
                      "Lowest Voltage: $(round(isnan(worst_under_limit) ? minimum(voltage_magnitude_series) : worst_under_limit, digits=4))\n" *
                      "Highest Voltage: $(round(isnan(worst_over_limit) ? maximum(voltage_magnitude_series) : worst_over_limit, digits=4))"
+    if time_day > 7
+        violation_text *= "\nTime span: $(time_day) days"
+    end
+
+    data_min = minimum(vcat(voltage_magnitude_series, [voltage_min_limit, voltage_max_limit]))
+    data_max = maximum(vcat(voltage_magnitude_series, [voltage_min_limit, voltage_max_limit]))
+    value_range = max(data_max - data_min, eps())
+    x_pos = time_points[end] - max(1, round(Int, length(time_points) * 0.05))
+    y_pos = data_min + 0.1 * value_range
     
-    annotate!(0.8 * length(voltage_magnitude_series), 
-              voltage_min_limit + 0.6 * (voltage_max_limit - voltage_min_limit), 
-              text(violation_text, :left, 8))
+    annotate!(x_pos, y_pos,
+              text(violation_text, :right, 8))
     
     # Save the plot if a path is provided
     if save_path !== nothing
